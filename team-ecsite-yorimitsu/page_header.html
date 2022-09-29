@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8" />
+	<title>Wings</title>
+</head>
+<body>
+	<th:block th:fragment="pageHeader">
+		<script src="http://code.jquery.com/jquery-3.4.1.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+		<link rel="stylesheet"
+				href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+		<script src="/js/util/stringUtil.js" th:src="@{/js/util/stringUtil.js}"></script>
+		<script src="/js/util/validator.js" th:src="@{/js/util/validator.js}"></script>
+		<script src="/js/dialogConfig.js" th:src="@{/js/dialogConfig.js}"></script>
+		<script>
+			$(() => {
+				$('#loginError').dialog(dialogConfig.loginError);
+				$('button#login').on('click', () => {
+					//ログイン時
+					if($('#hiddenUserName').val() == ''){
+						let jsonString = {
+							'userName': $('input[name=userName]').val(),
+							'password': $('input[name=password]').val()
+						};
+						$.ajax({
+							type: 'POST',
+							url: '/wings/auth/login',
+							data: JSON.stringify(jsonString),
+							contentType: 'application/json',
+							datatype: 'json',
+							scriptCharset: 'utf-8'
+						})
+						.then((result) => {
+							let user = JSON.parse(result);
+							if(user != null){
+								$('#login').text('ログアウト');
+								$('.welcomeMsg').text(`ようこそ！ ${user.userName} さん`);
+								$('#hiddenUserName').val(user.userName);
+								$('input[name=userName]').val('');
+								$('input[name=password]').val('');
+								$('ul.menu li:nth-child(2)').remove();
+								$('<li><a href="/wings/mypage/">マイページ</a></li>').appendTo($('ul.menu'));
+							} else {
+								$('#loginError').dialog('open');
+							}
+						}, () => {
+							console.error('Error: ajax connection failed.(login)');
+						});
+					} else {
+					//ログアウト時
+						$.ajax({
+							type: 'POST',
+							url: '/wings/auth/logout',
+						})
+						.then((result) => {
+							let userName = result;
+							if(userName == ''){
+								alert("ログアウトしました。");
+								location.href = '/wings/';
+							} 
+						}, () => {
+							console.error('Error: ajax connection failed.(logout)');
+						});
+					}
+				});
+			});
+		</script>
+		<div class="headerTop">
+			<h1 class="logo"><a href="/wings/">Wings</a></h1>
+			<span class="signup">
+				<a href="/wings/user/" th:href="@{/wings/user/}">
+				新規ユーザ登録はこちら
+				</a>
+			</span>
+			<span class="welcomeMsg"
+				th:text="'ようこそ！ '+ ${loginSession.userName != null ? loginSession.userName : 'ゲスト'}+' さん'">
+			</span>
+			<input type="hidden" id="hiddenUserName" 
+				th:value= "${loginSession.userName} != null ? ${loginSession.userName} : ''"/>
+		</div>
+		<nav>
+			<div class="loginArea">
+				<input type="text" name="userName" />
+				<input type="password" name="password" />
+				<button id="login" th:text="${loginSession.userName} != null ? 'ログアウト' : 'ログイン'"></button>
+			</div>
+			<ul class="menu">
+				<li><a href="/wings/cart/">カート</a></li>
+				<li th:if="${loginSession.userName != null}"><a href="/wings/mypage/">マイページ</a></li>
+			</ul>
+		</nav>
+		<!-- Modal Dialog (ログインエラー) -->
+		<div th:insert="fragments/dialog_login_error::dialogLoginError"></div>
+	</th:block>
+</body>
+</html>
